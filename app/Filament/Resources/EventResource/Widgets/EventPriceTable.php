@@ -126,7 +126,30 @@ class EventPriceTable extends Widget
 
     public function calculateDetailedPricing()
     {
-        // Symulacja różnych wariantów uczestników (jak w EventTemplate)
+        $this->detailedCalculations = [];
+
+        // Najpierw spróbuj użyć event-scoped pricePerPerson gdy istnieją
+        $eventPrices = $this->record->pricePerPerson()->get();
+
+        if ($eventPrices && $eventPrices->count() > 0) {
+            foreach ($eventPrices as $ep) {
+                $qty = $ep->event_template_qty_id ? null : ($ep->qty ?? null);
+                $qtyLabel = $ep->event_template_qty_id ? 'Wariant szablonu' : ( ($ep->qty ?? null) ? $ep->qty . ' osób' : 'Domyślny');
+
+                $this->detailedCalculations[] = [
+                    'qty' => $ep->event_template_qty_id ? null : ($ep->qty ?? null),
+                    'name' => $qtyLabel,
+                    'program_cost' => $ep->price_base ?? 0,
+                    'transport_cost' => $ep->transport_cost ?? 0,
+                    'total_cost' => $ep->price_with_tax ?? ($ep->price_per_person * ($ep->qty ?? 1)),
+                    'cost_per_person' => $ep->price_per_person ?? 0,
+                ];
+            }
+
+            return;
+        }
+
+        // Fallback: symulacja wariantów (jak wcześniej)
         $variants = [
             ['qty' => 10, 'name' => '10 osób'],
             ['qty' => 20, 'name' => '20 osób'],
@@ -134,8 +157,6 @@ class EventPriceTable extends Widget
             ['qty' => 40, 'name' => '40 osób'],
             ['qty' => 50, 'name' => '50 osób'],
         ];
-
-        $this->detailedCalculations = [];
 
         foreach ($variants as $variant) {
             $qty = $variant['qty'];
@@ -145,15 +166,14 @@ class EventPriceTable extends Widget
             foreach ($this->programPoints->where('include_in_calculation', true) as $point) {
                 $groupSize = $point->templatePoint->group_size ?? 1;
                 $unitPrice = $point->unit_price ?? 0;
-                
-                // Kalkulacja podobna do EventTemplate
+
                 if ($groupSize <= 1) {
                     $cost = $qty * $unitPrice;
                 } else {
                     $groupsNeeded = ceil($qty / $groupSize);
                     $cost = $groupsNeeded * $unitPrice;
                 }
-                
+
                 $totalProgramCost += $cost;
             }
 

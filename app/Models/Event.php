@@ -254,6 +254,14 @@ class Event extends Model
             'Automatycznie utworzony snapshot w momencie tworzenia imprezy na podstawie szablonu: ' . $template->name
         );
 
+        // Wykonaj wstępną kalkulację per-event aby zapisać event-scoped ceny
+        try {
+            $calculator = new \App\Services\EventPriceCalculator();
+            $calculator->calculateForEvent($event);
+        } catch (\Throwable $e) {
+            // nie przerywamy tworzenia eventu jeśli kalkulacja się nie powiedzie
+        }
+
         return $event;
     }
 

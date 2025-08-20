@@ -12,19 +12,31 @@ class EventProgramPoint extends Model
     use HasFactory;
 
     protected $fillable = [
-        'event_id',
-        'event_template_program_point_id',
-        'day',
-        'order',
-        'unit_price',
-        'quantity',
-        'total_price',
-        'notes',
-        'include_in_program',
-        'include_in_calculation',
-        'active',
-        'show_title_style',
-        'show_description',
+    'event_id',
+    'event_template_program_point_id',
+    'name',
+    'description',
+    'office_notes',
+    'pilot_notes',
+    'day',
+    'order',
+    'duration_hours',
+    'duration_minutes',
+    'featured_image',
+    'gallery_images',
+    'unit_price',
+    'quantity',
+    'total_price',
+    'notes',
+    'include_in_program',
+    'include_in_calculation',
+    'active',
+    'show_title_style',
+    'show_description',
+    'group_size',
+    'currency_id',
+    'convert_to_pln',
+    'parent_id',
     ];
 
     protected $casts = [
@@ -35,7 +47,25 @@ class EventProgramPoint extends Model
         'active' => 'boolean',
         'show_title_style' => 'boolean',
         'show_description' => 'boolean',
+        'gallery_images' => 'array',
+        'convert_to_pln' => 'boolean',
     ];
+
+    /**
+     * Parent program point (for hierarchical structure)
+     */
+    public function parent()
+    {
+        return $this->belongsTo(self::class, 'parent_id');
+    }
+
+    /**
+     * Child program points
+     */
+    public function children()
+    {
+        return $this->hasMany(self::class, 'parent_id')->orderBy('order');
+    }
 
     protected static function booted()
     {

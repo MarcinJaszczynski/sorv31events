@@ -16,6 +16,7 @@ class EventPriceTable extends Widget
     public $costsByDay;
     public $transportCost = 0;
     public $detailedCalculations = [];
+    public $editingPrice = null; // holds EventPricePerPerson model data for inline editing
     
     public function mount()
     {
@@ -149,6 +150,31 @@ class EventPriceTable extends Widget
             return;
         }
 
+        // Jeśli event powstał ze szablonu i mamy start_place_id, spróbuj użyć dokładnego engine'u
+        try {
+            if ($this->record->event_template_id) {
+                $engine = new \App\Services\EventTemplateCalculationEngine();
+                $detailed = $engine->calculateDetailed($this->record->eventTemplate, $this->record->start_place_id ?? null, $this->record->transfer_km ?? null);
+
+                if (!empty($detailed)) {
+                    foreach ($detailed as $qty => $row) {
+                        $this->detailedCalculations[] = [
+                            'qty' => $row['qty'] ?? $qty,
+                            'name' => $row['name'] ?? ($qty ? "{$qty} osób" : 'Domyślny'),
+                            'program_cost' => $row['price_base'] ?? ($row['price_per_person'] ?? 0) * ($row['qty'] ?? 1),
+                            'transport_cost' => $row['transport_cost'] ?? 0,
+                            'total_cost' => $row['price_with_tax'] ?? ($row['price_per_person'] ?? 0) * ($row['qty'] ?? 1),
+                            'cost_per_person' => $row['price_per_person'] ?? 0,
+                        ];
+                    }
+
+                    return;
+                }
+            }
+        } catch (\Throwable $e) {
+            // ignoruj i użyj fallbacku
+        }
+
         // Fallback: symulacja wariantów (jak wcześniej)
         $variants = [
             ['qty' => 10, 'name' => '10 osób'],
@@ -202,5 +228,55 @@ class EventPriceTable extends Widget
         $this->record->refresh();
         $this->record->calculateTotalCost();
         $this->loadCalculations();
+    }
+
+    // --- Price editing helpers (can be called from front-end Livewire actions) ---
+    public function editPrice(int $id)
+    {
+        $price = \App\Models\EventPricePerPerson::find($id);
+        if (!$price || $price->event_id !== $this->record->id) {
+            $this->dispatchBrowserEvent('toast', ['type' => 'error', 'message' => 'Nie znaleziono ceny.']);
+            return;
+        }
+
+        $this->editingPrice = $price->toArray();
+    }
+
+    public function saveEditingPrice(array $data)
+    {
+        if (empty($data['id'])) {
+            $this->dispatchBrowserEvent('toast', ['type' => 'error', 'message' => 'Brak identyfikatora ceny.']);
+            return;
+        }
+
+        $price = \App\Models\EventPricePerPerson::find($data['id']);
+        if (!$price || $price->event_id !== $this->record->id) {
+            $this->dispatchBrowserEvent('toast', ['type' => 'error', 'message' => 'Nieprawidłowy rekord ceny.']);
+            return;
+        }
+
+        // Zaktualizuj tylko bezpieczne pola
+        $price->price_per_person = $data['price_per_person'] ?? $price->price_per_person;
+        $price->transport_cost = $data['transport_cost'] ?? $price->transport_cost;
+        $price->price_with_tax = $data['price_with_tax'] ?? $price->price_with_tax;
+        $price->tax_breakdown = $data['tax_breakdown'] ?? $price->tax_breakdown;
+        $price->save();
+
+        $this->dispatchBrowserEvent('toast', ['type' => 'success', 'message' => 'Cena zapisana']);
+        $this->editingPrice = null;
+        $this->refreshCalculations();
+    }
+
+    public function deletePrice(int $id)
+    {
+        $price = \App\Models\EventPricePerPerson::find($id);
+        if (!$price || $price->event_id !== $this->record->id) {
+            $this->dispatchBrowserEvent('toast', ['type' => 'error', 'message' => 'Nie znaleziono ceny.']);
+            return;
+        }
+
+        $price->delete();
+        $this->dispatchBrowserEvent('toast', ['type' => 'success', 'message' => 'Cena usunięta']);
+        $this->refreshCalculations();
     }
 }

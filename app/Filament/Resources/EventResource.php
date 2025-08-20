@@ -139,6 +139,14 @@ class EventResource extends Resource
                             ->nullable()
                             ->helperText('Kopiowany z szablonu, można zmienić'),
 
+                        Forms\Components\Select::make('start_place_id')
+                            ->label('Miejsce wyjazdu')
+                            ->relationship('startPlace', 'name')
+                            ->searchable()
+                            ->preload()
+                            ->nullable()
+                            ->helperText('Wybierz miejsce wyjazdu dla tej imprezy'),
+
                         Forms\Components\Select::make('markup_id')
                             ->label('Narzut')
                             ->relationship('markup', 'name')
@@ -311,6 +319,7 @@ class EventResource extends Resource
             'index' => Pages\ListEvents::route('/'),
             'create' => Pages\CreateEvent::route('/create'),
             'edit' => Pages\EditEvent::route('/{record}/edit'),
+            'edit-program' => Pages\EditEventProgram::route('/{record}/program'),
             'calculation' => Pages\EventCalculation::route('/{record}/calculation'),
         ];
     }

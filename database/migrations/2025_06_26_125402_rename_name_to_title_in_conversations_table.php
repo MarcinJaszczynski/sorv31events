@@ -11,9 +11,12 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('conversations', function (Blueprint $table) {
-            $table->renameColumn('name', 'title');
-        });
+        // SQLite may not support rename if column doesn't exist; guard the call
+        if (Schema::hasTable('conversations') && Schema::hasColumn('conversations', 'name')) {
+            Schema::table('conversations', function (Blueprint $table) {
+                $table->renameColumn('name', 'title');
+            });
+        }
     }
 
     /**
@@ -21,8 +24,10 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('conversations', function (Blueprint $table) {
-            $table->renameColumn('title', 'name');
-        });
+        if (Schema::hasTable('conversations') && Schema::hasColumn('conversations', 'title')) {
+            Schema::table('conversations', function (Blueprint $table) {
+                $table->renameColumn('title', 'name');
+            });
+        }
     }
 };

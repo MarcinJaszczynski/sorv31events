@@ -385,6 +385,8 @@ class ProgramPointsRelationManager extends RelationManager
             ->emptyStateHeading('Brak punktów programu')
             ->emptyStateDescription('Dodaj punkty programu lub skopiuj je z szablonu.')
             ->emptyStateIcon('heroicon-o-calendar-days');
+    // Dodajemy prosty include z kontrolkami DnD (renderowane w widoku Filament)
+    echo view('filament.resources.event-resource.relation-managers.program-points-dnd-controls')->render();
     }
 
     public function reorderTable(array $order): void
@@ -393,8 +395,22 @@ class ProgramPointsRelationManager extends RelationManager
             \Illuminate\Support\Facades\Log::info('Początek reorderTable Event z grupowaniem', ['order' => $order]);
 
             \Illuminate\Support\Facades\DB::transaction(function () use ($order) {
+                // Obsługa dwóch formatów payloadu:
+                // 1) prosty: [id1, id2, id3]
+                // 2) obiektowy: [{id:1, parent_id: null, day:1, order:1}, ...]
+                $ids = [];
+                $objectPayload = false;
+                if (!empty($order) && is_array($order) && isset($order[0]) && is_array($order[0]) && isset($order[0]['id'])) {
+                    $objectPayload = true;
+                    foreach ($order as $item) {
+                        $ids[] = $item['id'];
+                    }
+                } else {
+                    $ids = $order;
+                }
+
                 // Pobieramy wszystkie rekordy do przetwarzania
-                $records = EventProgramPoint::whereIn('id', $order)->get()->keyBy('id');
+                $records = EventProgramPoint::whereIn('id', $ids)->get()->keyBy('id');
 
                 // Pobieramy aktualną strukturę grup (dni) z tabeli
                 $currentDays = $this->getOwnerRecord()
@@ -433,26 +449,57 @@ class ProgramPointsRelationManager extends RelationManager
                 }
 
                 // Aktualizujemy rekordy zgodnie z nową kolejnością
-                foreach ($order as $index => $recordId) {
-                    if (isset($records[$recordId]) && isset($dayMapping[$index])) {
-                        $newDay = $dayMapping[$index]['day'];
-                        $newOrder = $dayMapping[$index]['local_order'];
+                if ($objectPayload) {
+                    // payload zawiera pełne informacje
+                    foreach ($order as $item) {
+                        $recordId = $item['id'];
+                        if (!isset($records[$recordId])) {
+                            continue;
+                        }
+                        $newDay = $item['day'] ?? $records[$recordId]->day;
+                        $newOrder = $item['order'] ?? $records[$recordId]->order;
+                        $newParent = array_key_exists('parent_id', $item) ? ($item['parent_id'] !== '' ? (int)$item['parent_id'] : null) : ($records[$recordId]->parent_id ? (int)$records[$recordId]->parent_id : null);
 
-                        \Illuminate\Support\Facades\Log::info('Aktualizacja rekordu Event', [
+                        \Illuminate\Support\Facades\Log::info('Aktualizacja rekordu Event (obiektowy)', [
                             'recordId' => $recordId,
                             'oldDay' => $records[$recordId]->day,
                             'newDay' => $newDay,
                             'newOrder' => $newOrder,
-                            'globalIndex' => $index
+                            'newParent' => $newParent,
                         ]);
 
                         $result = EventProgramPoint::where('id', $recordId)
                             ->update([
                                 'day' => $newDay,
-                                'order' => $newOrder
+                                'order' => $newOrder,
+                                'parent_id' => $newParent,
                             ]);
 
                         \Illuminate\Support\Facades\Log::info('Wynik aktualizacji Event', ['result' => $result]);
+                    }
+                } else {
+                    // stary prosty format - zachowujemy dotychczasową logikę mapowania dni i pozycji
+                    foreach ($order as $index => $recordId) {
+                        if (isset($records[$recordId]) && isset($dayMapping[$index])) {
+                            $newDay = $dayMapping[$index]['day'];
+                            $newOrder = $dayMapping[$index]['local_order'];
+
+                            \Illuminate\Support\Facades\Log::info('Aktualizacja rekordu Event', [
+                                'recordId' => $recordId,
+                                'oldDay' => $records[$recordId]->day,
+                                'newDay' => $newDay,
+                                'newOrder' => $newOrder,
+                                'globalIndex' => $index
+                            ]);
+
+                            $result = EventProgramPoint::where('id', $recordId)
+                                ->update([
+                                    'day' => $newDay,
+                                    'order' => $newOrder
+                                ]);
+
+                            \Illuminate\Support\Facades\Log::info('Wynik aktualizacji Event', ['result' => $result]);
+                        }
                     }
                 }
             });

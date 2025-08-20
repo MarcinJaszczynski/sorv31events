@@ -79,6 +79,11 @@ class EventCalculation extends Page
                         ->success()
                         ->send();
                 }),
+            Actions\Action::make('edit_prices')
+                ->label('Edytuj ceny')
+                ->icon('heroicon-o-currency-dollar')
+                ->url(fn() => static::getResource()::getUrl('edit', ['record' => $this->record->id]) . '#price-per-person')
+                ->color('primary'),
         ];
     }
 

@@ -23,6 +23,7 @@ return new class extends Migration
             $table->json('program_points'); // punkty programu
             $table->json('calculations'); // kalkulacje i koszty
             $table->json('currency_rates')->nullable(); // kursy walut
+            $table->json('template_prices_snapshot')->nullable(); // uproszczony zrzut cen z szablonu dla tej lokalizacji i qty
             $table->decimal('total_cost_snapshot', 10, 2); // koszt całkowity w momencie snapshotu
             
             // Metadane

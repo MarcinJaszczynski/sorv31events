@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use App\Models\Place;
 use Illuminate\Support\Facades\Auth;
 
 class Event extends Model
@@ -15,6 +16,7 @@ class Event extends Model
 
     protected $fillable = [
         'event_template_id',
+    'start_place_id',
         'name',
         'client_name',
         'client_email',
@@ -67,6 +69,15 @@ class Event extends Model
         return $this->belongsTo(EventTemplate::class);
     }
 
+    /**
+    /**
+     * Miejsce startu imprezy
+     */
+    public function startPlace(): BelongsTo
+    {
+        return $this->belongsTo(Place::class, 'start_place_id');
+    }
+    
     /**
      * Twórca imprezy
      */
@@ -162,6 +173,7 @@ class Event extends Model
 
         $event = self::create([
             'event_template_id' => $template->id,
+            'start_place_id' => $data['start_place_id'] ?? $template->start_place_id ?? null,
             'name' => $data['name'],
             'client_name' => $data['client_name'],
             'client_email' => $data['client_email'] ?? null,
@@ -247,19 +259,85 @@ class Event extends Model
         }
 
         // Utwórz pierwotny snapshot imprezy
+        // Przygotuj uproszczony zrzut cen szablonu dla tej lokalizacji startu i standardowych qty
+        $templatePricesSnapshot = null;
+        try {
+            $startId = $event->start_place_id ?? null;
+            // Weź tylko najczęściej używane qty (10,20,30) lub te z EventTemplateQty
+            $standardQtys = [10,20,30];
+            $qtyIds = \App\Models\EventTemplateQty::whereIn('qty', $standardQtys)->pluck('id')->toArray();
+
+            $templatePricesSnapshot = \App\Models\EventTemplatePricePerPerson::where('event_template_id', $template->id)
+                ->where(function($q) use ($startId) {
+                    if ($startId) {
+                        $q->where('start_place_id', $startId);
+                    } else {
+                        $q->whereNull('start_place_id');
+                    }
+                })
+                ->whereIn('event_template_qty_id', $qtyIds)
+                ->orderBy('event_template_qty_id')
+                ->get()
+                ->map(function($p) {
+                    return [
+                        'qty' => $p->eventTemplateQty?->qty ?? null,
+                        'price_per_person' => $p->price_per_person,
+                        'price_with_tax' => $p->price_with_tax,
+                        'transport_cost' => $p->transport_cost,
+                        'currency_id' => $p->currency_id,
+                        'start_place_id' => $p->start_place_id,
+                    ];
+                })->toArray();
+        } catch (\Throwable $e) {
+            $templatePricesSnapshot = null;
+        }
+
         EventSnapshot::createSnapshot(
             $event, 
             'original', 
             'Pierwotny stan imprezy',
-            'Automatycznie utworzony snapshot w momencie tworzenia imprezy na podstawie szablonu: ' . $template->name
+            'Automatycznie utworzony snapshot w momencie tworzenia imprezy na podstawie szablonu: ' . $template->name,
+            $templatePricesSnapshot
         );
 
         // Wykonaj wstępną kalkulację per-event aby zapisać event-scoped ceny
         try {
-            $calculator = new \App\Services\EventPriceCalculator();
-            $calculator->calculateForEvent($event);
+            // Preferuj dokładny engine używany dla szablonów, aby uzyskać zgodność kosztorysu
+            $engine = new \App\Services\EventTemplateCalculationEngine();
+            $detailed = $engine->calculateDetailed($template, $data['start_place_id'] ?? $template->start_place_id ?? null, $data['transfer_km'] ?? null);
+
+            if (!empty($detailed)) {
+                // Usuń ewentualne stare wpisy (bezpieczny przebieg)
+                \App\Models\EventPricePerPerson::where('event_id', $event->id)->delete();
+
+                foreach ($detailed as $qty => $row) {
+                    \App\Models\EventPricePerPerson::create([
+                        'event_id' => $event->id,
+                        'event_template_qty_id' => $row['event_template_qty_id'] ?? null,
+                        'currency_id' => null, // engine returns PLN totals; keep null or set to PLN
+                        'start_place_id' => $event->start_place_id ?? null,
+                        'price_per_person' => $row['price_per_person'] ?? 0,
+                        'transport_cost' => $row['transport_cost'] ?? null,
+                        'price_base' => $row['price_base'] ?? null,
+                        'markup_amount' => $row['markup_amount'] ?? null,
+                        'tax_amount' => $row['tax_amount'] ?? null,
+                        'price_with_tax' => $row['price_with_tax'] ?? null,
+                        'tax_breakdown' => $row['debug']['taxes'] ?? null,
+                    ]);
+                }
+            } else {
+                // fallback to simple per-event calculator
+                $calculator = new \App\Services\EventPriceCalculator();
+                $calculator->calculateForEvent($event);
+            }
         } catch (\Throwable $e) {
-            // nie przerywamy tworzenia eventu jeśli kalkulacja się nie powiedzie
+            // fallback to simple calculator on any failure
+            try {
+                $calculator = new \App\Services\EventPriceCalculator();
+                $calculator->calculateForEvent($event);
+            } catch (\Throwable $e) {
+                // ignore
+            }
         }
 
         return $event;
@@ -275,41 +353,72 @@ class Event extends Model
             ->withPivot(['day', 'order', 'notes', 'include_in_program', 'include_in_calculation', 'active'])
             ->get();
 
+        // Map to keep track of created main points so children can reference parent_id
+        $createdPointsByTemplateId = [];
+
         foreach ($templatePoints as $point) {
-            // Skopiuj główny punkt programu
+            // Skopiuj główny punkt programu z wszystkimi polami
             $mainPoint = EventProgramPoint::create([
                 'event_id' => $this->id,
                 'event_template_program_point_id' => $point->id,
+                'name' => $point->name ?? null,
+                'description' => $point->description ?? null,
+                'office_notes' => $point->office_notes ?? null,
+                'pilot_notes' => $point->pilot_notes ?? null,
                 'day' => $point->pivot->day,
                 'order' => $point->pivot->order,
+                'duration_hours' => $point->duration_hours ?? null,
+                'duration_minutes' => $point->duration_minutes ?? null,
+                'featured_image' => $point->featured_image ?? null,
+                'gallery_images' => is_array($point->gallery_images) ? json_encode(array_values($point->gallery_images), JSON_UNESCAPED_SLASHES) : ($point->gallery_images ?? null),
                 'unit_price' => $this->convertToEventCurrency($point->unit_price ?? 0, $point->currency),
                 'quantity' => 1,
                 'total_price' => $this->convertToEventCurrency($point->unit_price ?? 0, $point->currency),
-                'notes' => $point->pivot->notes,
-                'include_in_program' => $point->pivot->include_in_program,
-                'include_in_calculation' => $point->pivot->include_in_calculation,
-                'active' => $point->pivot->active,
+                'notes' => $point->pivot->notes ?? null,
+                'include_in_program' => $point->pivot->include_in_program ?? true,
+                'include_in_calculation' => $point->pivot->include_in_calculation ?? true,
+                'active' => $point->pivot->active ?? true,
+                'show_title_style' => $point->pivot->show_title_style ?? true,
+                'show_description' => $point->pivot->show_description ?? true,
+                'group_size' => $point->group_size ?? null,
+                'currency_id' => $point->currency_id ?? null,
+                'convert_to_pln' => $point->convert_to_pln ?? false,
             ]);
 
-            // Skopiuj podpunkty jako osobne punkty programu (rozwiń na jeden poziom)
+            $createdPointsByTemplateId[$point->id] = $mainPoint->id;
+
+            // Skopiuj podpunkty i ustaw parent_id na główny punkt
             if ($point->children && $point->children->count() > 0) {
-                $childOrder = $point->pivot->order + 0.1; // Suborder for children
-                
+                $childOrder = $point->pivot->order + 0.1;
                 foreach ($point->children as $child) {
-                    EventProgramPoint::create([
+                    $childPoint = EventProgramPoint::create([
                         'event_id' => $this->id,
                         'event_template_program_point_id' => $child->id,
+                        'name' => $child->name ?? null,
+                        'description' => $child->description ?? null,
+                        'office_notes' => $child->office_notes ?? null,
+                        'pilot_notes' => $child->pilot_notes ?? null,
                         'day' => $point->pivot->day,
                         'order' => $childOrder,
+                        'duration_hours' => $child->duration_hours ?? null,
+                        'duration_minutes' => $child->duration_minutes ?? null,
+                        'featured_image' => $child->featured_image ?? null,
+                        'gallery_images' => is_array($child->gallery_images) ? json_encode(array_values($child->gallery_images), JSON_UNESCAPED_SLASHES) : ($child->gallery_images ?? null),
                         'unit_price' => $this->convertToEventCurrency($child->unit_price ?? 0, $child->currency),
                         'quantity' => 1,
                         'total_price' => $this->convertToEventCurrency($child->unit_price ?? 0, $child->currency),
-                        'notes' => "Podpunkt: {$child->name}",
-                        'include_in_program' => $point->pivot->include_in_program,
-                        'include_in_calculation' => $point->pivot->include_in_calculation,
-                        'active' => $point->pivot->active,
+                        'notes' => $child->pivot->notes ?? null,
+                        'include_in_program' => $child->pivot->include_in_program ?? $point->pivot->include_in_program ?? true,
+                        'include_in_calculation' => $child->pivot->include_in_calculation ?? $point->pivot->include_in_calculation ?? true,
+                        'active' => $child->pivot->active ?? $point->pivot->active ?? true,
+                        'show_title_style' => $child->pivot->show_title_style ?? $point->pivot->show_title_style ?? true,
+                        'show_description' => $child->pivot->show_description ?? $point->pivot->show_description ?? true,
+                        'group_size' => $child->group_size ?? null,
+                        'currency_id' => $child->currency_id ?? null,
+                        'convert_to_pln' => $child->convert_to_pln ?? false,
+                        'parent_id' => $mainPoint->id,
                     ]);
-                    
+
                     $childOrder += 0.1;
                 }
             }

@@ -1,0 +1,1 @@
+{"version":"pest_3.8.2","defects":{"Tests\\Feature\\CreateEventFromTemplateTest::test_create_event_from_template_saves_template_prices_snapshot":8},"times":{"Tests\\Feature\\CreateEventFromTemplateTest::test_create_event_from_template_saves_template_prices_snapshot":0.098}}

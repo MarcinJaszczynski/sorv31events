@@ -11,12 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('transport_types', function (Blueprint $table) {
-            $table->id();
-            $table->string('name');
-            $table->text('desc')->nullable();
-            $table->timestamps();
-        });
+        if (!Schema::hasTable('transport_types')) {
+            Schema::create('transport_types', function (Blueprint $table) {
+                $table->id();
+                $table->string('name');
+                $table->text('desc')->nullable();
+                $table->timestamps();
+            });
+        }
     }
 
     /**

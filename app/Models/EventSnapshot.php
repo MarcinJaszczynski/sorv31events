@@ -20,6 +20,7 @@ class EventSnapshot extends Model
         'program_points',
         'calculations',
         'currency_rates',
+    'template_prices_snapshot',
         'total_cost_snapshot',
         'created_by',
         'snapshot_date',
@@ -30,6 +31,7 @@ class EventSnapshot extends Model
         'program_points' => 'array',
         'calculations' => 'array',
         'currency_rates' => 'array',
+    'template_prices_snapshot' => 'array',
         'total_cost_snapshot' => 'decimal:2',
         'snapshot_date' => 'datetime',
     ];
@@ -53,7 +55,7 @@ class EventSnapshot extends Model
     /**
      * Utwórz snapshot imprezy
      */
-    public static function createSnapshot(Event $event, string $type = 'original', ?string $name = null, ?string $description = null): self
+    public static function createSnapshot(Event $event, string $type = 'original', ?string $name = null, ?string $description = null, ?array $templatePrices = null): self
     {
         // Pobierz punkty programu z pełnymi danymi
         $programPoints = $event->programPoints()
@@ -146,6 +148,7 @@ class EventSnapshot extends Model
             'program_points' => $programPoints,
             'calculations' => $calculations,
             'currency_rates' => $currencyRates,
+            'template_prices_snapshot' => $templatePrices,
             'total_cost_snapshot' => $event->total_cost,
             'created_by' => Auth::id(),
             'snapshot_date' => now(),

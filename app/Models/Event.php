@@ -149,6 +149,71 @@ class Event extends Model
         // Skopiuj punkty programu z szablonu (w tym podpunkty)
         $event->copyProgramPointsFromTemplate();
 
+        // Kopiuj warianty ilości (qty) z szablonu do event-scoped
+        try {
+            foreach ($template->qtyVariants()->get() as $qty) {
+                \App\Models\EventQty::create([
+                    'event_id' => $event->id,
+                    'qty' => $qty->qty,
+                    'gratis' => $qty->gratis,
+                    'staff' => $qty->staff,
+                    'driver' => $qty->driver,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            // ignore if table missing or other issues
+        }
+
+        // Kopiuj ceny per person (jeśli istnieją) do event-scoped table
+        try {
+            $templatePrices = \App\Models\EventTemplatePricePerPerson::where('event_template_id', $template->id)->get();
+            foreach ($templatePrices as $tp) {
+                \App\Models\EventPricePerPerson::create([
+                    'event_id' => $event->id,
+                    'event_template_qty_id' => $tp->event_template_qty_id,
+                    'currency_id' => $tp->currency_id,
+                    'start_place_id' => $tp->start_place_id,
+                    'price_per_person' => $tp->price_per_person,
+                    'transport_cost' => $tp->transport_cost,
+                    'price_base' => $tp->price_base,
+                    'markup_amount' => $tp->markup_amount,
+                    'tax_amount' => $tp->tax_amount,
+                    'price_with_tax' => $tp->price_with_tax,
+                    'tax_breakdown' => $tp->tax_breakdown,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            // ignore if no template prices
+        }
+
+        // Kopiuj ubezpieczenia dniowe
+        try {
+            foreach ($template->dayInsurances()->get() as $di) {
+                \App\Models\EventDayInsurance::create([
+                    'event_id' => $event->id,
+                    'day' => $di->day,
+                    'insurance_id' => $di->insurance_id,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            // ignore
+        }
+
+        // Kopiuj dostępność miejsc startowych
+        try {
+            foreach ($template->startingPlaceAvailabilities()->get() as $spa) {
+                \App\Models\EventStartingPlaceAvailability::create([
+                    'event_id' => $event->id,
+                    'start_place_id' => $spa->start_place_id,
+                    'end_place_id' => $spa->end_place_id,
+                    'available' => $spa->available,
+                    'note' => $spa->note,
+                ]);
+            }
+        } catch (\Throwable $e) {
+            // ignore
+        }
+
         // Utwórz pierwotny snapshot imprezy
         EventSnapshot::createSnapshot(
             $event, 

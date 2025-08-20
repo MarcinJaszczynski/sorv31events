@@ -116,6 +116,38 @@ class Event extends Model
     }
 
     /**
+     * Warianty ilości przypisane do imprezy
+     */
+    public function qtyVariants(): HasMany
+    {
+        return $this->hasMany(EventQty::class);
+    }
+
+    /**
+     * Price per person dla konkretnej imprezy
+     */
+    public function pricePerPerson(): HasMany
+    {
+        return $this->hasMany(EventPricePerPerson::class);
+    }
+
+    /**
+     * Ubezpieczenia dniowe przypisane do imprezy
+     */
+    public function dayInsurances(): HasMany
+    {
+        return $this->hasMany(EventDayInsurance::class);
+    }
+
+    /**
+     * Dostępność miejsc startowych dla imprezy
+     */
+    public function startingPlaceAvailabilities(): HasMany
+    {
+        return $this->hasMany(EventStartingPlaceAvailability::class);
+    }
+
+    /**
      * Utwórz imprezę na podstawie szablonu
      */
     public static function createFromTemplate(EventTemplate $template, array $data): self

@@ -6,6 +6,7 @@ use App\Filament\Resources\EventResource;
 use Filament\Resources\Pages\Page;
 use App\Models\Event;
 use Filament\Actions;
+use App\Services\EventPriceCalculator;
 
 class EventCalculation extends Page
 {
@@ -61,6 +62,20 @@ class EventCalculation extends Page
                     
                     \Filament\Notifications\Notification::make()
                         ->title('Snapshot utworzony')
+                        ->success()
+                        ->send();
+                }),
+            Actions\Action::make('recalculate_event')
+                ->label('Przelicz dla imprezy')
+                ->icon('heroicon-o-calculator')
+                ->color('primary')
+                ->requiresConfirmation()
+                ->action(function () {
+                    $calculator = new EventPriceCalculator();
+                    $calculator->calculateForEvent($this->record);
+
+                    \Filament\Notifications\Notification::make()
+                        ->title('Kalkulacja wykonana')
                         ->success()
                         ->send();
                 }),

@@ -16,6 +16,7 @@ class EventProgramDnD extends Component
     {
         $this->eventId = $eventId;
         $this->loadPoints();
+    $this->listeners = ['saveOrderFromDnDPayload' => 'saveOrder'];
     }
 
     public function loadPoints()

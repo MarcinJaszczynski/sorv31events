@@ -385,8 +385,15 @@ class ProgramPointsRelationManager extends RelationManager
             ->emptyStateHeading('Brak punktów programu')
             ->emptyStateDescription('Dodaj punkty programu lub skopiuj je z szablonu.')
             ->emptyStateIcon('heroicon-o-calendar-days');
-    // Dodajemy prosty include z kontrolkami DnD (renderowane w widoku Filament)
-    echo view('filament.resources.event-resource.relation-managers.program-points-dnd-controls')->render();
+        // Dodajemy prosty include z kontrolkami DnD (renderowane w widoku Filament)
+        echo view('filament.resources.event-resource.relation-managers.program-points-dnd-controls')->render();
+
+        // Renderujemy Livewire component z listą punktów i obsługą zapisu porządku
+        try {
+            echo \Livewire\Livewire::mount('event-program-dnd', ['eventId' => $this->getOwnerRecord()->id])->html();
+        } catch (\Throwable $e) {
+            \Illuminate\Support\Facades\Log::error('Nie udało się zamontować Livewire EventProgramDnD: ' . $e->getMessage());
+        }
     }
 
     public function reorderTable(array $order): void

@@ -1,3 +1,0 @@
-<div>
-Documents Editor
-</div>

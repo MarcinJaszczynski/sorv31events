@@ -1,23 +1,23 @@
-<x-filament-panels::page class="bg-gray-900 dark:bg-gray-950 min-h-screen">
+<x-filament-panels::page class="min-h-screen">
     {{-- Enhanced Kanban Board inspired by filament-kanban --}}
     
     {{-- Advanced Filters & Controls --}}
-    <div class="mb-6 flex flex-col sm:flex-row justify-between gap-4 bg-gray-800 dark:bg-gray-900 p-4 rounded-lg border border-gray-700 dark:border-gray-800">
+    <div class="mb-6 flex flex-col sm:flex-row justify-between gap-4 p-4 rounded-lg f-kanban-controls">
         <div class="flex flex-wrap gap-2">
             <input 
                 wire:model.live="searchTerm" 
                 type="text" 
                 placeholder="🔍 Szukaj zadań..."
-                class="fi-input block w-full border bg-gray-700 dark:bg-gray-800 py-2 px-3 text-base text-gray-100 dark:text-gray-200 outline-none transition duration-75 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-blue-500 sm:text-sm sm:leading-6 rounded-lg shadow-sm border-gray-600 dark:border-gray-700 focus:border-blue-400"
+                class="fi-input block w-full border py-2 px-3 text-base outline-none transition duration-75 placeholder:text-gray-400 sm:text-sm sm:leading-6 rounded-lg shadow-sm"
             />
             
-            <select wire:model.live="filterBy" class="fi-select-input block w-full border bg-gray-700 dark:bg-gray-800 py-2 pe-8 ps-3 text-base text-gray-100 dark:text-gray-200 outline-none transition duration-75 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-blue-500 sm:text-sm sm:leading-6 rounded-lg shadow-sm border-gray-600 dark:border-gray-700 focus:border-blue-400">
+            <select wire:model.live="filterBy" class="fi-select-input block w-full border py-2 pe-8 ps-3 text-base outline-none transition duration-75 sm:text-sm sm:leading-6 rounded-lg shadow-sm">
                 <option value="">🎯 Wszystkie zadania</option>
                 <option value="author">📝 Moje zadania</option>
                 <option value="assignee">👤 Przypisane do mnie</option>
             </select>
             
-            <select wire:model.live="priorityFilter" class="fi-select-input block w-full border bg-gray-700 dark:bg-gray-800 py-2 pe-8 ps-3 text-base text-gray-100 dark:text-gray-200 outline-none transition duration-75 placeholder:text-gray-400 dark:placeholder:text-gray-500 focus:ring-2 focus:ring-blue-500 sm:text-sm sm:leading-6 rounded-lg shadow-sm border-gray-600 dark:border-gray-700 focus:border-blue-400">
+            <select wire:model.live="priorityFilter" class="fi-select-input block w-full border py-2 pe-8 ps-3 text-base outline-none transition duration-75 sm:text-sm sm:leading-6 rounded-lg shadow-sm">
                 <option value="">🔥 Wszystkie priorytety</option>
                 <option value="high">🔴 Wysoki</option>
                 <option value="medium">🟡 Średni</option>
@@ -27,12 +27,12 @@
         
         <div class="flex gap-2 items-center">
             <button wire:click="refreshBoard" 
-                class="fi-btn relative grid-flow-col items-center justify-center font-semibold outline-none transition duration-75 focus-visible:ring-2 rounded-lg gap-1.5 px-3 py-2 text-sm inline-grid shadow-sm bg-gray-700 dark:bg-gray-800 text-gray-100 dark:text-gray-200 hover:bg-gray-600 dark:hover:bg-gray-700 focus-visible:ring-blue-500 border border-gray-600 dark:border-gray-700">
+                class="fi-btn relative grid-flow-col items-center justify-center font-semibold outline-none transition duration-75 focus-visible:ring-2 rounded-lg gap-1.5 px-3 py-2 text-sm inline-grid shadow-sm">
                 <x-heroicon-m-arrow-path class="w-4 h-4" />
                 Odśwież
             </button>
             <button wire:click="openQuickAddModal(null)"
-                class="fi-btn relative grid-flow-col items-center justify-center font-semibold outline-none transition duration-75 focus-visible:ring-2 rounded-lg gap-1.5 px-3 py-2 text-sm inline-grid shadow-sm bg-primary-700 dark:bg-primary-800 text-white hover:bg-primary-800 dark:hover:bg-primary-900 focus-visible:ring-blue-500 border border-primary-700 dark:border-primary-800">
+                class="fi-btn relative grid-flow-col items-center justify-center font-semibold outline-none transition duration-75 focus-visible:ring-2 rounded-lg gap-1.5 px-3 py-2 text-sm inline-grid shadow-sm">
                 <x-heroicon-m-plus class="w-4 h-4" />
                 Dodaj zadanie
             </button>
@@ -43,19 +43,19 @@
     <div 
         x-data="kanbanBoard()" 
         x-init="init()" 
-        class="md:flex overflow-x-auto overflow-y-hidden gap-4 pb-4 bg-gray-900 dark:bg-gray-950 p-4 rounded-xl"
+        class="md:flex overflow-x-auto overflow-y-hidden gap-4 pb-4 p-4 rounded-xl f-kanban-root"
         style="min-height: 70vh;"
         wire:ignore
     >
         @foreach ($statuses as $status)
-            <div class="kanban-column md:w-[24rem] flex-shrink-0 mb-5 md:min-h-full flex flex-col"> 
+            <div class="kanban-column md:w-[24rem] flex-shrink-0 mb-5 md:min-h-full flex flex-col f-kanban-column"> 
                 
                 {{-- Enhanced Column Header inspired by filament-kanban --}}
-                <h3 class="kanban-column-header mb-3 px-3 py-2 font-bold text-base text-white dark:text-gray-100 flex items-center justify-between rounded-lg bg-gradient-to-r from-gray-700 to-gray-600 dark:from-gray-800 dark:to-gray-700">
+                <h3 class="kanban-column-header mb-3 px-3 py-2 font-bold text-base flex items-center justify-between rounded-lg f-kanban-column-header">
                     <div class="flex items-center gap-2">
                         <span class="text-blue-400 dark:text-blue-300">●</span>
                         <span class="text-white dark:text-gray-100">{{ $status->name }}</span>
-                        <span class="text-xs font-black text-gray-200 dark:text-gray-300 bg-gray-600 dark:bg-gray-700 px-2 py-1 rounded-full border border-gray-500 dark:border-gray-600">
+                        <span class="text-xs font-black text-gray-200 px-2 py-1 rounded-full f-kanban-count">
                             {{ $tasks->where('status_id', $status->id)->count() }}
                         </span>
                     </div>
@@ -95,12 +95,12 @@
                         <div 
                             id="{{ $task->id }}" 
                             wire:click="editTask({{ $task->id }})"
-                            class="task-card record group bg-gray-700 dark:bg-gray-800 rounded-lg px-4 py-4 cursor-grab transition hover:shadow-xl transform hover:-translate-y-1 border border-gray-600 dark:border-gray-700 hover:border-blue-500 dark:hover:border-blue-400 relative" 
+                            class="task-card record group f-kanban-task px-4 py-4 cursor-grab transition hover:shadow-xl transform hover:-translate-y-1 relative" 
                             @if($task->updated_at && now()->diffInSeconds($task->updated_at, true) < 3)
                                 x-data
                                 x-init="
-                                    $el.classList.add('animate-pulse-twice', 'bg-blue-800', 'dark:bg-blue-900', 'border-blue-400', 'dark:border-blue-500')
-                                    $el.classList.remove('bg-gray-700', 'dark:bg-gray-800', 'border-gray-600', 'dark:border-gray-700')
+                                    $el.classList.add('animate-pulse-twice', 'bg-blue-800', 'border-blue-400')
+                                    $el.classList.remove('bg-gray-700', 'border-gray-600')
                                     setTimeout(() => {
                                         $el.classList.remove('bg-blue-800', 'dark:bg-blue-900', 'border-blue-400', 'dark:border-blue-500')
                                         $el.classList.add('bg-gray-700', 'dark:bg-gray-800', 'border-gray-600', 'dark:border-gray-700')
@@ -110,12 +110,12 @@
                         >
                             {{-- Task Header --}}
                             <div class="flex items-start justify-between mb-3">
-                                <h4 class="font-bold text-white dark:text-gray-100 text-base leading-5 flex-1 pr-2">
+                                <h4 class="font-bold text-base leading-5 flex-1 pr-2">
                                     {{ $task->title }}
                                 </h4>
                                 
                                 {{-- Priority Badge --}}
-                                <span class="priority-badge flex-shrink-0 text-xs px-2 py-1 rounded-full font-bold border" 
+                                <span class="priority-badge flex-shrink-0 text-xs px-2 py-1 rounded-full font-bold border f-kanban-priority" 
                                     style="background-color: {{ match ($task->priority) {
                                         'low' => '#059669',
                                         'medium' => '#D97706', 
@@ -146,14 +146,14 @@
                             {{-- Task Meta Info --}}
                             <div class="space-y-2 mb-3">
                                 @if($task->assignee)
-                                    <div class="flex items-center text-sm text-gray-200 dark:text-gray-300 bg-gray-600 dark:bg-gray-700 px-3 py-2 rounded-lg border border-gray-500 dark:border-gray-600">
+                                    <div class="flex items-center text-sm px-3 py-2 rounded-lg f-kanban-meta">
                                         <x-heroicon-m-user class="w-4 h-4 mr-2 text-gray-400 dark:text-gray-500" />
                                         <span class="font-medium text-white dark:text-gray-200">{{ $task->assignee->name }}</span>
                                     </div>
                                 @endif
 
                                 @if($task->due_date)
-                                    <div class="flex items-center text-sm {{ $task->due_date->isPast() ? 'text-red-200 bg-red-800 dark:text-red-100 dark:bg-red-900' : 'text-gray-200 bg-gray-600 dark:text-gray-300 dark:bg-gray-700' }} px-3 py-2 rounded-lg border {{ $task->due_date->isPast() ? 'border-red-600 dark:border-red-700' : 'border-gray-500 dark:border-gray-600' }}">
+                                    <div class="flex items-center text-sm px-3 py-2 rounded-lg {{ $task->due_date->isPast() ? 'f-kanban-meta-danger' : 'f-kanban-meta-default' }}">
                                         <x-heroicon-m-clock class="w-4 h-4 mr-2" />
                                         <span class="font-medium">{{ $task->due_date->format('d.m.Y H:i') }}</span>
                                         @if($task->due_date->isPast())

@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
+use Illuminate\Auth\AuthenticationException;
 use Livewire\Component;
 
 class ProgramPointChildrenEditor extends Component
@@ -64,7 +65,7 @@ class ProgramPointChildrenEditor extends Component
     {
         if (!Auth::check()) {
             $this->logSecurityEvent('unauthorized_access_attempt', 'User not authenticated');
-            abort(401, 'Nieautoryzowany dostęp');
+            throw new AuthenticationException('Nieautoryzowany dostęp');
         }
 
         // Note: For now, we only check if user is authenticated
@@ -295,6 +296,10 @@ class ProgramPointChildrenEditor extends Component
     // Metody do reagowania na zmiany filtrów
     public function updatedSearchTerm()
     {
+        // truncate to max 100 characters to satisfy validation expectations
+        if (!empty($this->searchTerm) && mb_strlen($this->searchTerm) > 100) {
+            $this->searchTerm = mb_substr($this->searchTerm, 0, 100);
+        }
         $this->applyFilters();
     }
 
@@ -423,66 +428,74 @@ class ProgramPointChildrenEditor extends Component
         $this->validate();
 
         try {
-            DB::beginTransaction();
+            DB::transaction(function () {
+                // Security: Validate child program point ID
+                $childId = (int) $this->modalData['child_program_point_id'];
+                if ($childId <= 0) {
+                    throw ValidationException::withMessages([
+                        'modalData.child_program_point_id' => 'Nieprawidłowy identyfikator punktu programu.',
+                        'child_program_point_id' => 'Nieprawidłowy identyfikator punktu programu.',
+                    ]);
+                }
 
-            // Security: Validate child program point ID
-            $childId = (int) $this->modalData['child_program_point_id'];
-            if ($childId <= 0) {
-                throw new ValidationException(['child_program_point_id' => 'Nieprawidłowy identyfikator punktu programu.']);
-            }
+                // Security: Check if child point exists and user has access
+                $childPoint = EventTemplateProgramPoint::find($childId);
+                if (!$childPoint) {
+                    $this->logSecurityEvent('invalid_child_point_access', "Child ID: $childId");
+                    throw ValidationException::withMessages([
+                        'modalData.child_program_point_id' => 'Wybrany punkt programu nie istnieje.',
+                        'child_program_point_id' => 'Wybrany punkt programu nie istnieje.',
+                    ]);
+                }
 
-            // Security: Check if child point exists and user has access
-            $childPoint = EventTemplateProgramPoint::find($childId);
-            if (!$childPoint) {
-                $this->logSecurityEvent('invalid_child_point_access', "Child ID: $childId");
-                throw new ValidationException(['child_program_point_id' => 'Wybrany punkt programu nie istnieje.']);
-            }
+                // Security: Prevent adding parent as child (circular reference)
+                if ($childId === $this->programPoint->id) {
+                    $this->logSecurityEvent('circular_reference_attempt', "Parent/Child ID: $childId");
+                    throw ValidationException::withMessages([
+                        'modalData.child_program_point_id' => 'Nie można dodać punktu jako podpunkt samego siebie.',
+                        'child_program_point_id' => 'Nie można dodać punktu jako podpunkt samego siebie.',
+                    ]);
+                }
 
-            // Security: Prevent adding parent as child (circular reference)
-            if ($childId === $this->programPoint->id) {
-                $this->logSecurityEvent('circular_reference_attempt', "Parent/Child ID: $childId");
-                throw new ValidationException(['child_program_point_id' => 'Nie można dodać punktu jako podpunkt samego siebie.']);
-            }
+                // Security: Check if relationship already exists
+                $existingRelation = DB::table('event_template_program_point_parent')
+                    ->where('parent_id', $this->programPoint->id)
+                    ->where('child_id', $childId)
+                    ->first();
 
-            // Security: Check if relationship already exists
-            $existingRelation = DB::table('event_template_program_point_parent')
-                ->where('parent_id', $this->programPoint->id)
-                ->where('child_id', $childId)
-                ->first();
+                if ($existingRelation) {
+                    $this->logSecurityEvent('duplicate_relationship_attempt', "Parent: {$this->programPoint->id}, Child: $childId");
+                    throw ValidationException::withMessages([
+                        'modalData.child_program_point_id' => 'Ten punkt już jest dodany jako podpunkt.',
+                        'child_program_point_id' => 'Ten punkt już jest dodany jako podpunkt.',
+                    ]);
+                }
 
-            if ($existingRelation) {
-                $this->logSecurityEvent('duplicate_relationship_attempt', "Parent: {$this->programPoint->id}, Child: $childId");
-                throw new ValidationException(['child_program_point_id' => 'Ten punkt już jest dodany jako podpunkt.']);
-            }
+                // Add new child
+                DB::table('event_template_program_point_parent')->insert([
+                    'parent_id' => $this->programPoint->id,
+                    'child_id' => $childId,
+                    'order' => (int) $this->modalData['order'],
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
 
-            // Add new child
-            DB::table('event_template_program_point_parent')->insert([
-                'parent_id' => $this->programPoint->id,
-                'child_id' => $childId,
-                'order' => (int) $this->modalData['order'],
-                'created_at' => now(),
-                'updated_at' => now(),
-            ]);
+                // Log successful operation
+                Log::info('Child program point added successfully', [
+                    'user_id' => Auth::id(),
+                    'parent_id' => $this->programPoint->id,
+                    'child_id' => $childId,
+                ]);
 
-            DB::commit();
-
-            // Log successful operation
-            Log::info('Child program point added successfully', [
-                'user_id' => Auth::id(),
-                'parent_id' => $this->programPoint->id,
-                'child_id' => $childId,
-            ]);
-
-            $this->closeModal();
-            $this->loadChildren(); // Wymuszenie ponownego ładowania danych
-            $this->dispatch('notify', ['type' => 'success', 'message' => 'Podpunkt dodany pomyślnie!']);
-            $this->dispatch('$refresh'); // Wymuś odświeżenie komponentu po dodaniu
-
+                $this->closeModal();
+                $this->loadChildren(); // Wymuszenie ponownego ładowania danych
+                $this->dispatch('notify', ['type' => 'success', 'message' => 'Podpunkt dodany pomyślnie!']);
+                $this->dispatch('$refresh'); // Wymuś odświeżenie komponentu po dodaniu
+            });
         } catch (ValidationException $e) {
-            DB::rollBack();
-            throw $e; // Re-throw validation exceptions
+            // rethrow to let tests assert exceptions where appropriate
+            throw $e;
         } catch (\Exception $e) {
-            DB::rollBack();
             $this->logSecurityEvent('save_child_error', $e->getMessage());
             Log::error("Błąd dodawania podpunktu: " . $e->getMessage(), [
                 'user_id' => Auth::id(),
@@ -500,51 +513,50 @@ class ProgramPointChildrenEditor extends Component
         $this->checkRateLimit('delete_child');
 
         try {
-            DB::beginTransaction();
+            DB::transaction(function () use ($childId) {
+                // Security: Validate child ID
+                $childId = (int) $childId;
+                if ($childId <= 0) {
+                    $this->logSecurityEvent('invalid_child_id_delete', "Child ID: $childId");
+                    throw new \InvalidArgumentException('Nieprawidłowy identyfikator podpunktu.');
+                }
 
-            // Security: Validate child ID
-            $childId = (int) $childId;
-            if ($childId <= 0) {
-                $this->logSecurityEvent('invalid_child_id_delete', "Child ID: $childId");
-                throw new \InvalidArgumentException('Nieprawidłowy identyfikator podpunktu.');
-            }
+                // Security: Verify ownership/access
+                $existingRelation = DB::table('event_template_program_point_parent')
+                    ->where('parent_id', $this->programPoint->id)
+                    ->where('child_id', $childId)
+                    ->first();
 
-            // Security: Verify ownership/access
-            $existingRelation = DB::table('event_template_program_point_parent')
-                ->where('parent_id', $this->programPoint->id)
-                ->where('child_id', $childId)
-                ->first();
+                if (!$existingRelation) {
+                    $this->logSecurityEvent('unauthorized_delete_attempt', "Parent: {$this->programPoint->id}, Child: $childId");
+                    throw new \InvalidArgumentException('Nie można usunąć podpunktu - brak uprawnień lub element nie istnieje.');
+                }
 
-            if (!$existingRelation) {
-                $this->logSecurityEvent('unauthorized_delete_attempt', "Parent: {$this->programPoint->id}, Child: $childId");
-                throw new \InvalidArgumentException('Nie można usunąć podpunktu - brak uprawnień lub element nie istnieje.');
-            }
+                $deleted = DB::table('event_template_program_point_parent')
+                    ->where('parent_id', $this->programPoint->id)
+                    ->where('child_id', $childId)
+                    ->delete();
 
-            $deleted = DB::table('event_template_program_point_parent')
-                ->where('parent_id', $this->programPoint->id)
-                ->where('child_id', $childId)
-                ->delete();
+                if ($deleted) {
+                    // Log successful operation
+                    Log::info('Child program point deleted successfully', [
+                        'user_id' => Auth::id(),
+                        'parent_id' => $this->programPoint->id,
+                        'child_id' => $childId,
+                    ]);
 
-            if ($deleted) {
-                DB::commit();
-
-                // Log successful operation
-                Log::info('Child program point deleted successfully', [
-                    'user_id' => Auth::id(),
-                    'parent_id' => $this->programPoint->id,
-                    'child_id' => $childId,
-                ]);
-
-                $this->loadChildren(); // Wymuszenie ponownego ładowania danych
-                $this->dispatch('notify', ['type' => 'success', 'message' => 'Podpunkt usunięty pomyślnie!']);
-                $this->dispatch('$refresh'); // Wymuś odświeżenie komponentu po usunięciu
-            } else {
-                DB::rollBack();
-                $this->logSecurityEvent('delete_failed', "Parent: {$this->programPoint->id}, Child: $childId");
-                $this->dispatch('notify', ['type' => 'error', 'message' => 'Nie udało się usunąć podpunktu.']);
-            }
+                    $this->loadChildren(); // Wymuszenie ponownego ładowania danych
+                    $this->dispatch('notify', ['type' => 'success', 'message' => 'Podpunkt usunięty pomyślnie!']);
+                    $this->dispatch('$refresh'); // Wymuś odświeżenie komponentu po usunięciu
+                } else {
+                    $this->logSecurityEvent('delete_failed', "Parent: {$this->programPoint->id}, Child: $childId");
+                    $this->dispatch('notify', ['type' => 'error', 'message' => 'Nie udało się usunąć podpunktu.']);
+                }
+            });
+        } catch (\InvalidArgumentException $e) {
+            // rethrow to satisfy tests expecting InvalidArgumentException
+            throw $e;
         } catch (\Exception $e) {
-            DB::rollBack();
             $this->logSecurityEvent('delete_child_error', $e->getMessage());
             Log::error("Błąd usuwania podpunktu: " . $e->getMessage(), [
                 'user_id' => Auth::id(),
@@ -563,57 +575,54 @@ class ProgramPointChildrenEditor extends Component
         $this->checkRateLimit('update_order');
 
         try {
-            DB::beginTransaction();
-
-            // Security: Validate input
-            if (!is_array($list)) {
-                $this->logSecurityEvent('invalid_order_list', 'List is not an array');
-                throw new \InvalidArgumentException('Nieprawidłowa lista kolejności.');
-            }
-
-            // Security: Validate each child ID
-            $validatedIds = [];
-            foreach ($list as $index => $childId) {
-                $childId = (int) $childId;
-                if ($childId <= 0) {
-                    continue; // Skip invalid IDs
+            DB::transaction(function () use ($list) {
+                // Security: Validate input
+                if (!is_array($list)) {
+                    $this->logSecurityEvent('invalid_order_list', 'List is not an array');
+                    throw new \InvalidArgumentException('Nieprawidłowa lista kolejności.');
                 }
 
-                // Verify that this child belongs to current parent
-                $exists = DB::table('event_template_program_point_parent')
-                    ->where('parent_id', $this->programPoint->id)
-                    ->where('child_id', $childId)
-                    ->exists();
+                // Security: Validate each child ID
+                $validatedIds = [];
+                foreach ($list as $index => $childId) {
+                    $childId = (int) $childId;
+                    if ($childId <= 0) {
+                        continue; // Skip invalid IDs
+                    }
 
-                if ($exists) {
-                    $validatedIds[] = $childId;
+                    // Verify that this child belongs to current parent
+                    $exists = DB::table('event_template_program_point_parent')
+                        ->where('parent_id', $this->programPoint->id)
+                        ->where('child_id', $childId)
+                        ->exists();
+
+                    if ($exists) {
+                        $validatedIds[] = $childId;
+                    }
                 }
-            }
 
-            // Update order for validated IDs only
-            foreach ($validatedIds as $index => $childId) {
-                DB::table('event_template_program_point_parent')
-                    ->where('parent_id', $this->programPoint->id)
-                    ->where('child_id', $childId)
-                    ->update([
-                        'order' => $index,
-                        'updated_at' => now(),
-                    ]);
-            }
-
-            DB::commit();
+                // Update order for validated IDs only
+                foreach ($validatedIds as $index => $childId) {
+                    DB::table('event_template_program_point_parent')
+                        ->where('parent_id', $this->programPoint->id)
+                        ->where('child_id', $childId)
+                        ->update([
+                            'order' => $index,
+                            'updated_at' => now(),
+                        ]);
+                }
+            });
 
             // Log successful operation
             Log::info('Children order updated successfully', [
                 'user_id' => Auth::id(),
                 'parent_id' => $this->programPoint->id,
-                'children_count' => count($validatedIds),
+                'children_count' => is_array($list) ? count($list) : 0,
             ]);
 
             $this->loadChildren();
             $this->dispatch('notify', ['type' => 'success', 'message' => 'Kolejność podpunktów zaktualizowana.']);
         } catch (\Exception $e) {
-            DB::rollBack();
             $this->logSecurityEvent('update_order_error', $e->getMessage());
             Log::error("Błąd aktualizacji kolejności podpunktów: " . $e->getMessage(), [
                 'user_id' => Auth::id(),

@@ -8,6 +8,7 @@ use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Http\Request;
 use App\Models\EventTemplate;
 use App\Models\Event;
+use Illuminate\Support\Facades\Log;
 
 class CreateEvent extends CreateRecord
 {
@@ -41,7 +42,18 @@ class CreateEvent extends CreateRecord
     {
         // If template present, use Event::createFromTemplate to ensure deep-copy behavior
         if ($this->template) {
+            // Log minimal, non-sensitive input data coming from the UI to help debug
+            Log::info('CreateEvent:web:before_create_from_template', [
+                'event_template_id' => $this->template->id,
+                'name' => $data['name'] ?? null,
+                'participant_count' => $data['participant_count'] ?? ($data['calculation_qtys'][0]['qty'] ?? null),
+                'start_date' => $data['start_date'] ?? null,
+                'duration_days' => $data['duration_days'] ?? null,
+                'bus_id' => $data['bus_id'] ?? null,
+            ]);
+
             $event = Event::createFromTemplate($this->template, $data);
+            Log::info('CreateEvent:web:after_create_from_template', ['event_id' => $event->id]);
             return $event;
         }
 

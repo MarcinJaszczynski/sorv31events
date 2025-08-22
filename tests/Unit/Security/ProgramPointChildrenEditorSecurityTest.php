@@ -29,9 +29,17 @@ class ProgramPointChildrenEditorSecurityTest extends TestCase
     {
         $programPoint = EventTemplateProgramPoint::factory()->create();
 
-        $this->expectException(\Illuminate\Auth\AuthenticationException::class);
-        
-        Livewire::test(ProgramPointChildrenEditor::class, ['programPoint' => $programPoint]);
+        // Livewire may wrap exceptions thrown during initial render into a ViewException.
+        // Accept either a direct AuthenticationException or a ViewException that wraps it.
+        try {
+            Livewire::test(ProgramPointChildrenEditor::class, ['programPoint' => $programPoint]);
+            $this->fail('Expected an authentication exception to be thrown when mounting component for unauthenticated user.');
+        } catch (\Illuminate\Auth\AuthenticationException $e) {
+            $this->assertInstanceOf(\Illuminate\Auth\AuthenticationException::class, $e);
+        } catch (\Illuminate\View\ViewException $e) {
+            // Livewire sometimes wraps the original exception in a ViewException during rendering
+            $this->assertInstanceOf(\Illuminate\Auth\AuthenticationException::class, $e->getPrevious());
+        }
     }
 
     /** @test */

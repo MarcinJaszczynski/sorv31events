@@ -242,8 +242,13 @@ class EventPriceTable extends Widget
         $this->editingPrice = $price->toArray();
     }
 
-    public function saveEditingPrice(array $data)
+    public function saveEditingPrice($data = null)
     {
+        // allow calling without params when modal is bound to $this->editingPrice
+        if (is_null($data)) {
+            $data = $this->editingPrice ?? [];
+        }
+
         if (empty($data['id'])) {
             $this->dispatchBrowserEvent('toast', ['type' => 'error', 'message' => 'Brak identyfikatora ceny.']);
             return;
@@ -255,11 +260,40 @@ class EventPriceTable extends Widget
             return;
         }
 
+        // Validate basic numeric fields
+        $errors = [];
+        if (isset($data['price_per_person']) && !is_numeric($data['price_per_person'])) {
+            $errors[] = 'Cena za osobę musi być liczbą.';
+        }
+        if (isset($data['transport_cost']) && !is_numeric($data['transport_cost'])) {
+            $errors[] = 'Koszt transportu musi być liczbą.';
+        }
+        if (isset($data['price_with_tax']) && !is_numeric($data['price_with_tax'])) {
+            $errors[] = 'Cena z podatkiem musi być liczbą.';
+        }
+
+        // Try to parse tax_breakdown if provided
+        if (isset($data['tax_breakdown']) && $data['tax_breakdown'] !== null && $data['tax_breakdown'] !== '') {
+            if (is_string($data['tax_breakdown'])) {
+                $decoded = json_decode($data['tax_breakdown'], true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    $data['tax_breakdown'] = $decoded;
+                } else {
+                    $errors[] = 'Nieprawidłowy format JSON dla rozbicia VAT.';
+                }
+            }
+        }
+
+        if (!empty($errors)) {
+            $this->dispatchBrowserEvent('toast', ['type' => 'error', 'message' => implode(' ', $errors)]);
+            return;
+        }
+
         // Zaktualizuj tylko bezpieczne pola
-        $price->price_per_person = $data['price_per_person'] ?? $price->price_per_person;
-        $price->transport_cost = $data['transport_cost'] ?? $price->transport_cost;
-        $price->price_with_tax = $data['price_with_tax'] ?? $price->price_with_tax;
-        $price->tax_breakdown = $data['tax_breakdown'] ?? $price->tax_breakdown;
+        $price->price_per_person = isset($data['price_per_person']) ? (float)$data['price_per_person'] : $price->price_per_person;
+        $price->transport_cost = isset($data['transport_cost']) ? (float)$data['transport_cost'] : $price->transport_cost;
+        $price->price_with_tax = isset($data['price_with_tax']) ? (float)$data['price_with_tax'] : $price->price_with_tax;
+        $price->tax_breakdown = array_key_exists('tax_breakdown', $data) ? $data['tax_breakdown'] : $price->tax_breakdown;
         $price->save();
 
         $this->dispatchBrowserEvent('toast', ['type' => 'success', 'message' => 'Cena zapisana']);

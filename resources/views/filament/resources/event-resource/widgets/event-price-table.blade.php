@@ -263,6 +263,42 @@
                 </div>
             </div>
         @endif
+        
+    <!-- Inline price edit modal (Livewire bound) -->
+    <div x-data="{ editing: @entangle('editingPrice') }"
+         x-cloak
+         x-show="editing !== null"
+         class="fixed inset-0 z-50 flex items-center justify-center">
+        <div class="fixed inset-0 bg-black opacity-50" @click="editing = null"></div>
+        <div class="bg-white dark:bg-gray-900 rounded-lg p-6 z-50 w-full max-w-2xl">
+                <h3 class="text-lg font-semibold mb-4">Edytuj cenę</h3>
+
+                <div class="grid grid-cols-1 gap-4">
+                    <div>
+                        <label class="text-sm text-gray-600">Cena za osobę (PLN)</label>
+                        <input type="number" step="0.01" wire:model.defer="editingPrice.price_per_person" class="w-full mt-1 rounded border-gray-200 dark:border-gray-700">
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-600">Koszt transportu (PLN)</label>
+                        <input type="number" step="0.01" wire:model.defer="editingPrice.transport_cost" class="w-full mt-1 rounded border-gray-200 dark:border-gray-700">
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-600">Cena z podatkiem (PLN)</label>
+                        <input type="number" step="0.01" wire:model.defer="editingPrice.price_with_tax" class="w-full mt-1 rounded border-gray-200 dark:border-gray-700">
+                    </div>
+                    <div>
+                        <label class="text-sm text-gray-600">Rozbicie VAT (JSON)</label>
+                        <input type="text" wire:model.defer="editingPrice.tax_breakdown" placeholder='{"vat": 23, "amount": 100}' class="w-full mt-1 rounded border-gray-200 dark:border-gray-700">
+                        <p class="text-xs text-gray-500 mt-1">Podaj JSON z rozbiciem VAT lub zostaw puste.</p>
+                    </div>
+                </div>
+
+                    <div class="mt-4 flex justify-end gap-2">
+                        <x-filament::button color="secondary" size="sm" @click="editing = null">Anuluj</x-filament::button>
+                        <x-filament::button color="primary" size="sm" wire:click.prevent="saveEditingPrice" x-bind:disabled="editing === null">Zapisz</x-filament::button>
+                    </div>
+            </div>
+        </div>
     @else
         <div class="text-center py-8">
             <p class="text-gray-600 dark:text-gray-400">Brak danych do wyświetlenia</p>

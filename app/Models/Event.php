@@ -348,6 +348,13 @@ class Event extends Model
      */
     public function copyProgramPointsFromTemplate(): void
     {
+        // Log start of copy for debugging
+        try {
+            \Illuminate\Support\Facades\Log::info('copyProgramPointsFromTemplate:start', ['event_id' => $this->id, 'event_template_id' => $this->event_template_id ?? null]);
+        } catch (\Throwable $_) {
+            // ignore logging issues
+        }
+
         $templatePoints = $this->eventTemplate->programPoints()
             ->with(['children', 'currency'])
             ->withPivot(['day', 'order', 'notes', 'include_in_program', 'include_in_calculation', 'active'])
@@ -387,7 +394,7 @@ class Event extends Model
 
             $createdPointsByTemplateId[$point->id] = $mainPoint->id;
 
-            // Skopiuj podpunkty i ustaw parent_id na główny punkt
+            // Skopiuj podpunkty jako równorzędne punkty (bez parent_id)
             if ($point->children && $point->children->count() > 0) {
                 $childOrder = $point->pivot->order + 0.1;
                 foreach ($point->children as $child) {
@@ -408,15 +415,16 @@ class Event extends Model
                         'quantity' => 1,
                         'total_price' => $this->convertToEventCurrency($child->unit_price ?? 0, $child->currency),
                         'notes' => $child->pivot->notes ?? null,
-                        'include_in_program' => $child->pivot->include_in_program ?? $point->pivot->include_in_program ?? true,
-                        'include_in_calculation' => $child->pivot->include_in_calculation ?? $point->pivot->include_in_calculation ?? true,
-                        'active' => $child->pivot->active ?? $point->pivot->active ?? true,
-                        'show_title_style' => $child->pivot->show_title_style ?? $point->pivot->show_title_style ?? true,
-                        'show_description' => $child->pivot->show_description ?? $point->pivot->show_description ?? true,
+                        // Use child's pivot flags if present; do not inherit from parent — each child should be independent
+                        'include_in_program' => $child->pivot->include_in_program ?? true,
+                        'include_in_calculation' => $child->pivot->include_in_calculation ?? true,
+                        'active' => $child->pivot->active ?? true,
+                        'show_title_style' => $child->pivot->show_title_style ?? true,
+                        'show_description' => $child->pivot->show_description ?? true,
                         'group_size' => $child->group_size ?? null,
                         'currency_id' => $child->currency_id ?? null,
                         'convert_to_pln' => $child->convert_to_pln ?? false,
-                        'parent_id' => $mainPoint->id,
+                        // tworzymy podpunkt jako osobny, równorzędny wpis (parent_id pozostaje null)
                     ]);
 
                     $childOrder += 0.1;
@@ -424,6 +432,13 @@ class Event extends Model
             }
         }
 
+        // Log completion for debugging
+        try {
+            \Illuminate\Support\Facades\Log::info('copyProgramPointsFromTemplate:done', ['event_id' => $this->id, 'created_points_count' => $this->programPoints()->count()]);
+        } catch (\Throwable $_) {
+            // ignore logging issues
+        }
++
         $this->logHistory('program_copied', null, null, null, 'Skopiowano punkty programu z szablonu (w tym podpunkty)');
         $this->calculateTotalCost();
     }

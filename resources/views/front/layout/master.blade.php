@@ -42,6 +42,7 @@
     <link rel="stylesheet" href="{{ asset('dist-front/css/spacing.css') }}">
     <link rel="stylesheet" href="{{ asset('dist-front/css/style.css') }}">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans:ital,wght@0,100..900;1,100..900&display=swap">
+    <link rel="stylesheet" href="{{ asset('dist-front/css/badges-fix.css') }}">
 
     <!-- All Javascripts -->
     <script src="{{ asset('dist-front/js/jquery-3.6.1.min.js') }}"></script>

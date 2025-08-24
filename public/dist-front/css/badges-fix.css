@@ -1,0 +1,38 @@
+/* Lightweight badge overrides — loaded after compiled style.css so no need to edit the compiled file.
+   Intentionally avoids using !important; uses specific selectors and is loaded last to take precedence.
+*/
+.package-box-tags a.badge-tag,
+.package-box a.badge-tag,
+.package-page a.badge-tag,
+.type a.badge-tag,
+.badge-tag,
+a.badge-tag,
+.package-box-tags .badge-tag,
+.package-box .badge-tag {
+    display: inline-block;
+    margin-right: 6px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    background-color: #6B7280; /* subtle gray */
+    color: #ffffff;
+    text-decoration: none;
+    font-size: 0.85rem;
+    line-height: 1;
+    border: 1px solid rgba(15,23,42,0.06);
+}
+
+a.badge-tag:hover,
+.badge-tag:hover {
+    background-color: #565e66; /* slightly darker gray on hover */
+    color: #ffffff;
+    text-decoration: none;
+}
+
+.package-box-tags .badge-tag,
+.package-box .badge-tag { border-radius: 6px; padding: 3px 8px; font-size: 0.86rem; }
+
+.badge-tag:focus,
+a.badge-tag:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.08);
+}

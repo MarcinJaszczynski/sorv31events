@@ -237,33 +237,36 @@ html[data-theme='light'] div[x-data="kanbanBoard()"] .priority-badge {
 
 /* Subtle badge for tags on package page */
 /* Stronger selectors to override compiled styles (public/dist-front/css/style.css) */
-.package-box-tags .badge-tag,
-.package-box .badge-tag,
-.package-page .badge-tag,
-.type .badge-tag,
+.package-box-tags a.badge-tag,
+.package-box a.badge-tag,
+.package-page a.badge-tag,
+.type a.badge-tag,
 .badge-tag,
 a.badge-tag,
-.badge-tag:link,
-.badge-tag:visited {
+.package-box-tags .badge-tag,
+.package-box .badge-tag {
     display: inline-block;
     margin-right: 6px;
-    padding: 4px 8px;
+    padding: 4px 10px;
     border-radius: 12px;
-    background-color: #6B7280 !important; /* subtle gray */
-    color: #ffffff !important;
-    text-decoration: none !important;
+    background-color: #6B7280;
+    color: #ffffff;
+    text-decoration: none;
     font-size: 0.85rem;
     line-height: 1;
     border: 1px solid rgba(15,23,42,0.06);
 }
-.badge-tag:hover,
-a.badge-tag:hover {
-    background-color: #565e66 !important; /* slightly darker gray on hover */
-    color: #ffffff !important;
-    text-decoration: none !important;
+
+a.badge-tag:hover,
+.badge-tag:hover {
+    background-color: #565e66; /* slightly darker gray on hover */
+    color: #ffffff;
+    text-decoration: none;
 }
+
 .package-box-tags .badge-tag,
-.package-box .badge-tag { border-radius: 6px !important; padding: 3px 8px !important; font-size: 0.86rem !important; }
+.package-box .badge-tag { border-radius: 6px; padding: 3px 8px; font-size: 0.86rem; }
+
 .badge-tag:focus,
 a.badge-tag:focus {
     outline: none;

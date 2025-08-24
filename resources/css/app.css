@@ -244,8 +244,8 @@ a.badge-tag,
     margin-right: 6px;
     padding: 4px 8px;
     border-radius: 12px;
-    background-color: rgba(15,23,42,0.04);
-    color: var(--f-text) !important;
+    background-color: #6B7280; /* subtle gray */
+    color: #ffffff !important;
     text-decoration: none !important;
     font-size: 0.85rem;
     line-height: 1;
@@ -253,8 +253,8 @@ a.badge-tag,
 }
 .badge-tag:hover,
 a.badge-tag:hover {
-    background-color: rgba(15,23,42,0.07) !important;
-    color: var(--f-text) !important;
+    background-color: #565e66 !important; /* slightly darker gray on hover */
+    color: #ffffff !important;
     text-decoration: none !important;
 }
 .badge-tag:focus,

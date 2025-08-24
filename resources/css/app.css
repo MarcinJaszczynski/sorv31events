@@ -236,6 +236,11 @@ html[data-theme='light'] div[x-data="kanbanBoard()"] .priority-badge {
 }
 
 /* Subtle badge for tags on package page */
+/* Stronger selectors to override compiled styles (public/dist-front/css/style.css) */
+.package-box-tags .badge-tag,
+.package-box .badge-tag,
+.package-page .badge-tag,
+.type .badge-tag,
 .badge-tag,
 a.badge-tag,
 .badge-tag:link,
@@ -244,7 +249,7 @@ a.badge-tag,
     margin-right: 6px;
     padding: 4px 8px;
     border-radius: 12px;
-    background-color: #6B7280; /* subtle gray */
+    background-color: #6B7280 !important; /* subtle gray */
     color: #ffffff !important;
     text-decoration: none !important;
     font-size: 0.85rem;
@@ -257,6 +262,8 @@ a.badge-tag:hover {
     color: #ffffff !important;
     text-decoration: none !important;
 }
+.package-box-tags .badge-tag,
+.package-box .badge-tag { border-radius: 6px !important; padding: 3px 8px !important; font-size: 0.86rem !important; }
 .badge-tag:focus,
 a.badge-tag:focus {
     outline: none;

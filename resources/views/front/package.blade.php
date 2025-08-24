@@ -85,7 +85,21 @@
                         {{ $item->subtitle }}
                     </div>
                     <div class="type">
-                        {{ $item->tags->pluck('name')->join(', ') }}
+                        @if($item->tags && $item->tags->count() > 0)
+                            @php
+                                // regionSlug obliczony powyżej
+                                $tagBaseUrl = route('packages', ['regionSlug' => $regionSlug]);
+                            @endphp
+                            @foreach($item->tags as $tag)
+                                @php
+                                    $tagSlug = \Illuminate\Support\Str::slug($tag->name);
+                                    $tagUrl = $tagBaseUrl . '?tag=' . $tagSlug;
+                                @endphp
+                                <a href="{{ $tagUrl }}" class="badge badge-tag" style="display:inline-block;margin-right:6px;padding:4px 8px;border-radius:12px;background:#f0f0f0;color:#333;text-decoration:none;">{{ $tag->name }}</a>
+                            @endforeach
+                        @else
+                            &nbsp;
+                        @endif
                     </div>
                 </div>
                 <div class="description-section">

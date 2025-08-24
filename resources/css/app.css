@@ -236,19 +236,29 @@ html[data-theme='light'] div[x-data="kanbanBoard()"] .priority-badge {
 }
 
 /* Subtle badge for tags on package page */
-.badge-tag {
+.badge-tag,
+a.badge-tag,
+.badge-tag:link,
+.badge-tag:visited {
     display: inline-block;
     margin-right: 6px;
     padding: 4px 8px;
     border-radius: 12px;
     background-color: rgba(15,23,42,0.04);
-    color: var(--f-text);
-    text-decoration: none;
+    color: var(--f-text) !important;
+    text-decoration: none !important;
     font-size: 0.85rem;
     line-height: 1;
     border: 1px solid rgba(15,23,42,0.06);
 }
-.badge-tag:hover {
-    background-color: rgba(15,23,42,0.06);
-    text-decoration: none;
+.badge-tag:hover,
+a.badge-tag:hover {
+    background-color: rgba(15,23,42,0.07) !important;
+    color: var(--f-text) !important;
+    text-decoration: none !important;
+}
+.badge-tag:focus,
+a.badge-tag:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(99,102,241,0.08);
 }

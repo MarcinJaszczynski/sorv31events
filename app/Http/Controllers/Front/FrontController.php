@@ -10,6 +10,7 @@ use App\Models\EventTemplatePricePerPerson;
 use App\Models\Currency;
 use App\Models\Place;
 use App\Models\EventType;
+use App\Models\Tag;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -326,7 +327,7 @@ class FrontController extends Controller
         $sort_by = request('sort_by');
         $event_type_id = request('event_type_id');
 
-        // Najpierw route param regionSlug -> start_place
+    // Najpierw route param regionSlug -> start_place
         $start_place_id = null;
         $regionSlug = request()->route('regionSlug');
         if ($regionSlug && $regionSlug !== 'region') {
@@ -344,6 +345,14 @@ class FrontController extends Controller
         // Fallback cookie
         if (!$start_place_id) {
             $start_place_id = request()->cookie('start_place_id');
+        }
+
+        // Optional tag filter (slug of tag name) from query param ?tag=
+        $tagSlug = request()->get('tag');
+        $tagId = null;
+        if ($tagSlug) {
+            $tag = Tag::all()->first(function($t) use ($tagSlug){ return str()->slug($t->name) === $tagSlug; });
+            if ($tag) $tagId = $tag->id;
         }
 
         // Pobierz unikalne start_place_id z event_template_starting_place_availability
@@ -369,7 +378,7 @@ class FrontController extends Controller
         // Pobierz wszystkie Event Types dla filtra
         $eventTypes = EventType::orderBy('name')->get();
 
-        $eventTemplate = EventTemplate::where('is_active', true)
+    $eventTemplate = EventTemplate::where('is_active', true)
             ->with([
                 'tags',
                 'programPoints',
@@ -395,6 +404,15 @@ class FrontController extends Controller
                 $query->whereHas('eventTypes', function($q) use ($event_type_id) {
                     $q->where('event_types.id', $event_type_id);
                 });
+            })
+            ->when($tagId, function($query) use ($tagId) {
+                $query->whereHas('tags', function($q) use ($tagId) {
+                    $q->where('tags.id', $tagId);
+                });
+            })
+            ->when(!$tagId && $tagSlug, function($query) {
+                // tag slug provided but not found -> return empty
+                $query->whereRaw('0=1');
             })
             ->get();
 

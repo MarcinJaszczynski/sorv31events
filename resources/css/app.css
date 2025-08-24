@@ -234,3 +234,21 @@ html[data-theme='light'] div[x-data="kanbanBoard()"] .priority-badge {
 .f-kanban-priority {
     color: #fff !important;
 }
+
+/* Subtle badge for tags on package page */
+.badge-tag {
+    display: inline-block;
+    margin-right: 6px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    background-color: rgba(15,23,42,0.04);
+    color: var(--f-text);
+    text-decoration: none;
+    font-size: 0.85rem;
+    line-height: 1;
+    border: 1px solid rgba(15,23,42,0.06);
+}
+.badge-tag:hover {
+    background-color: rgba(15,23,42,0.06);
+    text-decoration: none;
+}

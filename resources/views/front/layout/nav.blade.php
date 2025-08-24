@@ -1,6 +1,20 @@
 <div class="navbar-area" id="stickymenu">
-    <!-- Menu For Mobile Device -->
-    <div class="mobile-nav">
+    <!-- Mobile fixed bar: logo left, hamburger right -->
+    <div class="mobile-bar d-lg-none">
+        <a href="{{ route('home') }}" class="logo">
+            <img src="{{ asset('uploads/logo.png') }}" alt="">
+        </a>
+        <button class="mobile-toggle" aria-controls="mobileMenuContainer" aria-expanded="false" type="button">
+            <span class="hamburger" aria-hidden="true"></span>
+            <span class="sr-only">Menu</span>
+        </button>
+    </div>
+
+    <!-- container where mobile menu will be injected by JS -->
+    <div id="mobileMenuContainer" class="mobile-menu-container d-lg-none" aria-hidden="true"></div>
+
+    <!-- legacy mobile-nav (kept hidden when mobile-bar is present) -->
+    <div class="mobile-nav" style="display:none;">
         <a href="{{ route('home') }}" class="logo">
             <img src="{{ asset('uploads/logo.png') }}" alt="">
         </a>

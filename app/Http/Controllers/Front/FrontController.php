@@ -91,7 +91,7 @@ class FrontController extends Controller
             ->select('start_place_id')
             ->distinct()
             ->pluck('start_place_id');
-        $startPlaces = Place::whereIn('id', $startPlaceIds)->orderBy('name')->get();
+    $startPlaces = Place::whereIn('id', $startPlaceIds)->where('starting_place', true)->orderBy('name')->get();
         $currentStartPlaceId = $request->get('start_place_id');
         if (!$currentStartPlaceId) {
             $currentStartPlaceId = $request->cookie('start_place_id');
@@ -210,7 +210,7 @@ class FrontController extends Controller
             ->select('start_place_id')
             ->distinct()
             ->pluck('start_place_id');
-        $startPlaces = Place::whereIn('id', $startPlaceIds)->orderBy('name')->get();
+    $startPlaces = Place::whereIn('id', $startPlaceIds)->where('starting_place', true)->orderBy('name')->get();
 
         // Kolejność ustalania start_place_id: route slug -> explicit query -> cookie -> (brak domyślnego na home)
         $start_place_id = null;
@@ -352,7 +352,7 @@ class FrontController extends Controller
             ->select('start_place_id')
             ->distinct()
             ->pluck('start_place_id');
-        $startPlaces = Place::whereIn('id', $startPlaceIds)->orderBy('name')->get();
+    $startPlaces = Place::whereIn('id', $startPlaceIds)->where('starting_place', true)->orderBy('name')->get();
 
         // Śledzenie czy użyto domyślnej wartości Warszawa
         $usedDefaultWarszawa = false;

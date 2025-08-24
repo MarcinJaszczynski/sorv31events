@@ -29,7 +29,13 @@ Route::group(['prefix' => '{regionSlug}', 'where' => ['regionSlug' => '[A-Za-z0-
     Route::get('/directory-packages', [FrontController::class, 'directorypackages'])->name('directory-packages');
     Route::get('/blog', [FrontController::class, 'blog'])->name('blog');
     Route::get('/blog/{slug}', [FrontController::class, 'blogPost'])->name('blog.post');
-    Route::get('/packages', [FrontController::class, 'packages'])->name('packages');
+    // public-facing packages are now under '/oferty' (Polish). Keep the route name 'packages'
+    // so all existing calls to route('packages') keep working. Add a redirect from the old
+    // '/packages' path to the new '/oferty' for backward compatibility.
+    Route::get('/oferty', [FrontController::class, 'packages'])->name('packages');
+    Route::get('/packages', function ($regionSlug) {
+        return redirect()->route('packages', ['regionSlug' => $regionSlug]);
+    });
     Route::get('/packages/partial', [FrontController::class, 'packagesPartial'])->name('packages.partial');
     Route::get('/package/{slug}', [FrontController::class, 'package'])->name('package');
     // Pretty package route remains the same pattern but now nested (duplicated regionSlug) -> keep original outside group

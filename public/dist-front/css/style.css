@@ -5988,3 +5988,66 @@ input[type="text"], input[type="email"], input[type="password"], textarea {
         max-width: none !important;
     }
 }
+
+/* MOBILE: ensure the main header stays visible and does not overlap content
+     This is appended to the front 'style.css' so it takes effect immediately. */
+@media (max-width: 991px) {
+    .main-nav,
+    .mean-container .mean-bar,
+    header .navbar {
+        position: sticky !important;
+        top: 0 !important;
+        z-index: 11000 !important;
+        background: #fff !important;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.06) !important;
+    }
+
+    .mean-container .mean-bar {
+        display: flex !important;
+        align-items: center !important;
+        height: 60px !important;
+    }
+
+    /* offset main content so sticky header doesn't cover it */
+    .page-top { padding-top: 60px !important; }
+}
+
+    /* MOBILE: meanmenu precise positioning fixes to prevent the expanded menu
+         from being rendered above the header (fixes reported visual shift). */
+    @media (max-width: 991px) {
+        /* ensure mobile menu bar is fixed at the very top */
+        .mean-container .mean-bar {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            height: 60px !important;
+            padding: 0 12px !important;
+            background: #fff !important;
+            z-index: 11000 !important;
+            border-bottom: 1px solid rgba(0,0,0,0.04) !important;
+        }
+
+        /* expanded navigation must start below the fixed bar */
+        .mean-container .mean-nav {
+            margin-top: 60px !important;
+            position: relative !important;
+            z-index: 10999 !important;
+        }
+
+        /* mean-push is used by meanmenu to offset content; ensure correct value */
+        .mean-push {
+            margin-top: 60px !important;
+            height: 0 !important;
+        }
+
+        /* hide desktop main-nav on mobile to avoid duplicate/overlapping headers */
+        .main-nav {
+            display: none !important;
+        }
+
+        /* make sure mobile container is visible */
+        .mobile-nav {
+            display: block !important;
+        }
+    }

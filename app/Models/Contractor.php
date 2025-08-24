@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Models\ContractorType;
 
 /**
  * Model Contractor
@@ -45,6 +46,14 @@ class Contractor extends Model
      */
     public function contacts()
     {
-        return $this->belongsToMany(Contact::class, 'contact_contractor');
+    return $this->belongsToMany(Contact::class, 'contractor_contact');
+    }
+
+    /**
+     * Relacja wiele-do-wielu z typami kontrahentów
+     */
+    public function types()
+    {
+        return $this->belongsToMany(ContractorType::class, 'contractor_contractortype')->withTimestamps();
     }
 }

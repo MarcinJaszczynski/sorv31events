@@ -24,6 +24,9 @@ class DatabaseSeeder extends Seeder
             EventTemplateQtySeeder::class,
             KategoriaSzablonuSeeder::class,
             HotelRoomSeeder::class,
+            ContractorTypesSeeder::class,
+            ContractorsSeeder::class,
+            ContractorContractorTypeSeeder::class,
         ]);
 
         \Spatie\Permission\Models\Role::firstOrCreate(['name' => 'admin']);

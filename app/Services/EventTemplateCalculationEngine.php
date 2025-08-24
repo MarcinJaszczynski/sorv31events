@@ -7,6 +7,7 @@ use App\Models\EventTemplateQty;
 use App\Models\EventTemplatePricePerPerson;
 use App\Models\Currency;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\DB;
 
 class EventTemplateCalculationEngine
 {
@@ -27,7 +28,7 @@ class EventTemplateCalculationEngine
         } catch (\Illuminate\Database\QueryException $e) {
             // some environments don't have event_template_id column on event_template_qties
             // fallback: try to collect event_template_qty_id values from existing price rows for this template
-            $qtyIds = \DB::table('event_template_price_per_person')
+            $qtyIds = DB::table('event_template_price_per_person')
                 ->where('event_template_id', $template->id)
                 ->distinct()
                 ->pluck('event_template_qty_id')
@@ -433,7 +434,32 @@ class EventTemplateCalculationEngine
 
     private function calculateMarkupForTemplate(EventTemplate $template, float $base): float
     {
-        $markupPercent = $template->markup_percent ?? 20;
-        return $base * ($markupPercent / 100);
+        // Prefer explicitly assigned Markup model if present
+        $percent = null;
+
+        // If relation is loaded or available, prefer it
+        if (isset($template->markup) && $template->markup?->percent !== null) {
+            $percent = $template->markup->percent;
+        }
+
+        // If markup_id is set but relation not loaded, try to resolve it
+        if ($percent === null && !empty($template->markup_id)) {
+            $markup = \App\Models\Markup::find($template->markup_id);
+            $percent = $markup?->percent;
+        }
+
+        // Fallback to legacy field on template
+        if ($percent === null && isset($template->markup_percent) && $template->markup_percent !== null) {
+            $percent = $template->markup_percent;
+        }
+
+        // Final fallback: system default markup (ensure some value)
+        if ($percent === null) {
+            $default = \App\Models\Markup::where('is_default', true)->first();
+            $percent = $default?->percent ?? 20;
+        }
+
+        \Illuminate\Support\Facades\Log::info("[MARKUP] Using markup percent={$percent} for event_template_id={$template->id}");
+        return $base * ($percent / 100);
     }
 }

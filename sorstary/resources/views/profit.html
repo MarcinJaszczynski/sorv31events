@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    <div id="totalplace"></div>
+
+
+    <script>
+        let total = 300000;
+        let percent = 1.5;
+        let place = document.querySelector('#totalplace')
+        let qq = ''
+        for(let i=0; i<220; i++){
+            total = total * (1.002);
+            qq = qq + "<div>Dzień: " + i + " - total: " + total +"</div>";
+        }
+        place.innerHTML = qq;
+    
+
+
+
+    </script>
+    
+</body>
+</html>

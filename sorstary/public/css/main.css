@@ -1,0 +1,98 @@
+main {
+    margin-top: 20px;
+}
+nav {
+    margin-bottom: 20px;
+}
+
+.top__bar {
+    margin-bottom: 20px;
+}
+
+.event__search__bar {
+    margin: 20 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.table__text__bold {
+    font-weight: 600;
+}
+
+html,
+body,
+header,
+.view {
+    height: 100%;
+}
+
+textarea {
+    width: 100% !important;
+}
+
+@media (max-width: 740px) {
+    html,
+    body,
+    header,
+    .view {
+        height: 1000px;
+    }
+}
+
+@media (min-width: 800px) and (max-width: 850px) {
+    html,
+    body,
+    header,
+    .view {
+        height: 650px;
+    }
+}
+@media (min-width: 800px) and (max-width: 850px) {
+    .navbar:not(.top-nav-collapse) {
+        /* background: #1c2331 !important; */
+    }
+}
+/* Navbar animation */
+.navbar {
+    /* background-color: #1c2331; */
+}
+
+.top-nav-collapse {
+    /* background-color: #1c2331; */
+}
+
+/* Adding color to the Navbar on mobile */
+@media only screen and (max-width: 768px) {
+    .navbar {
+        /* background-color: #1c2331; */
+    }
+}
+
+.landing__page__top {
+    min-height: 350px;
+    margin: 20px 0px;
+    display: flex;
+}
+
+.landing__page__top-left {
+    background-image: url("/img/womanwithsuitcase.svg");
+    background-repeat: no-repeat;
+    background-size: contain;
+    background-position-x: right;
+}
+
+.landing__page__top-right {
+    display: flex;
+    align-items: center;
+}
+
+/* Footer color for sake of consistency with Navbar */
+.page-footer {
+    background-color: #1c2331;
+    color: aliceblue;
+    padding-top: 20px;
+    padding-bottom: 20px;
+}
+
+

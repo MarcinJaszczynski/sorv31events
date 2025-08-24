@@ -41,6 +41,6 @@ class Contact extends Model
      */
     public function contractors()
     {
-        return $this->belongsToMany(Contractor::class, 'contact_contractor');
+    return $this->belongsToMany(Contractor::class, 'contractor_contact');
     }
 }

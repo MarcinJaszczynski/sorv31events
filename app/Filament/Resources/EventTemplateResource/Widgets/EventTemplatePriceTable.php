@@ -602,8 +602,6 @@ class EventTemplatePriceTable extends Widget
                     $currenciesTotals[$busCurrency] += $busTransportCost * $busMultiplier;
                 }
             }            // OBLICZ NARZUT - po dodaniu wszystkich kosztów (włącznie z transportem)
-            $markup = $this->record->markup ?: \App\Models\Markup::where('is_default', true)->first();
-
             // Przygotuj tymczasowe dane do obliczenia narzutu
             $tempCalculation = [
                 'PLN' => ['total' => $plnTotal]
@@ -643,8 +641,8 @@ class EventTemplatePriceTable extends Widget
             $calculations[$qty]['markup'] = $markupCalculation;
 
             // Dodaj podatki do obliczeń
-            // Dodaj informacje o narzucie
-            $markupPercent = $this->record->markup_percent ?? 20;
+            // Dodaj informacje o narzucie (użyj preferowanego źródła procentu)
+            $markupPercent = $this->getMarkupPercent();
             $calculations[$qty]['markup'] = [
                 'amount' => $markupCalculation['amount'],
                 'percent_applied' => $markupPercent,
@@ -756,8 +754,40 @@ class EventTemplatePriceTable extends Widget
 
     private function calculateMarkup($basePrice): float
     {
-        $markupPercent = $this->record->markup_percent ?? 20; // domyślnie 20%
+        $markupPercent = $this->getMarkupPercent();
         return $basePrice * ($markupPercent / 100);
+    }
+
+    /**
+     * Prefer markup percent from related Markup model, then markup_id, then template field, then default markup.
+     */
+    private function getMarkupPercent(): float
+    {
+        // If relation loaded
+        if (isset($this->record->markup) && $this->record->markup?->percent !== null) {
+            return (float) $this->record->markup->percent;
+        }
+
+        // If markup_id set, try to resolve
+        if (!empty($this->record->markup_id)) {
+            $m = \App\Models\Markup::find($this->record->markup_id);
+            if ($m && $m->percent !== null) return (float) $m->percent;
+        }
+
+        // Legacy field on template
+        if (isset($this->record->markup_percent) && $this->record->markup_percent !== null && $this->record->markup_percent !== '') {
+            return (float) $this->record->markup_percent;
+        }
+
+        // Fallback to default markup record
+        $default = \App\Models\Markup::where('is_default', true)->first();
+        return (float) ($default?->percent ?? 20);
+    }
+
+    // Public helper for diagnostics/tests
+    public function debugGetMarkupPercent(): float
+    {
+        return $this->getMarkupPercent();
     }
 
     private function calculateTax($basePrice): float

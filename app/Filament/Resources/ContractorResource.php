@@ -74,25 +74,16 @@ class ContractorResource extends Resource
             Forms\Components\Textarea::make('office_notes')
                 ->label('Uwagi dla biura')
                 ->rows(3),
-            Forms\Components\Select::make('contacts')
-                ->label('Kontakty')
+            Forms\Components\Select::make('types')
+                ->label('Typy kontrahenta')
                 ->multiple()
-                ->relationship('contacts', 'first_name')
+                ->relationship('types', 'name')
                 ->searchable()
                 ->preload()
                 ->createOptionForm([
-                    Forms\Components\TextInput::make('first_name')
-                        ->label('Imię')
+                    Forms\Components\TextInput::make('name')
+                        ->label('Nazwa typu')
                         ->required(),
-                    Forms\Components\TextInput::make('last_name')
-                        ->label('Nazwisko')
-                        ->required(),
-                    Forms\Components\TextInput::make('phone')
-                        ->label('Telefon'),
-                    Forms\Components\TextInput::make('email')
-                        ->label('Email'),
-                    Forms\Components\Textarea::make('notes')
-                        ->label('Uwagi'),
                 ]),
         ]);
     }
@@ -129,6 +120,12 @@ class ContractorResource extends Resource
                     ->label('Kontakty')
                     ->formatStateUsing(fn ($state, $record) =>
                         $record->contacts->map(fn ($contact) => $contact->first_name . ' ' . $contact->last_name)->join(', ')
+                    )
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('types')
+                    ->label('Typy')
+                    ->formatStateUsing(fn ($state, $record) =>
+                        $record->types->pluck('name')->join(', ')
                     )
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')

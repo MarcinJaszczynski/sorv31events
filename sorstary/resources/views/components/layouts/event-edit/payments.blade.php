@@ -1,0 +1,3 @@
+<div>
+Payments Editor
+</div>

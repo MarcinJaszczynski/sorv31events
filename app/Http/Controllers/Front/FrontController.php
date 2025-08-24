@@ -87,6 +87,7 @@ class FrontController extends Controller
 
         // NEW: start places (for unified selector functionality, appearance unchanged)
         $startPlaceIds = EventTemplateStartingPlaceAvailability::query()
+            ->where('available', true)
             ->select('start_place_id')
             ->distinct()
             ->pluck('start_place_id');
@@ -205,6 +206,7 @@ class FrontController extends Controller
     {
         // Lista dostępnych miejsc startowych (jak w packages())
         $startPlaceIds = EventTemplateStartingPlaceAvailability::query()
+            ->where('available', true)
             ->select('start_place_id')
             ->distinct()
             ->pluck('start_place_id');
@@ -346,6 +348,7 @@ class FrontController extends Controller
 
         // Pobierz unikalne start_place_id z event_template_starting_place_availability
         $startPlaceIds = EventTemplateStartingPlaceAvailability::query()
+            ->where('available', true)
             ->select('start_place_id')
             ->distinct()
             ->pluck('start_place_id');

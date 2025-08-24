@@ -63,8 +63,10 @@
                                     }
                                 @endphp
                                 @if ($loadedTags && $loadedTags->isNotEmpty())
+                                    @php $tagsBase = route('packages', ['regionSlug' => $regionSlugForLinks]); @endphp
                                     @foreach ($loadedTags as $tag)
-                                        <div class="tag">{{ $tag->name }}</div>
+                                        @php $tSlug = \Illuminate\Support\Str::slug($tag->name); $tUrl = $tagsBase . '?tag=' . $tSlug; @endphp
+                                        <a href="{{ $tUrl }}" class="badge-tag">{{ $tag->name }}</a>
                                     @endforeach
                                 @else
                                     {{-- Brak tagów --}}
